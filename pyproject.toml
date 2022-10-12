@@ -1,0 +1,30 @@
+[tool.poetry]
+name = "econ-reports"
+version = "0.1.0"
+description = "Generate economic reports with jupyter notebooks and papermill"
+authors = ["gw-moore <gwmoore92@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "econ_reports"}]
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.11"
+pandas = "^1.5.0"
+jupyter = "^1.0.0"
+papermill = "^2.4.0"
+pyfredapi = "^0.3.0"
+plotly = "^5.10.0"
+jupyterlab = "^3.4.7"
+tabulate = "^0.8.10"
+black = {extras = ["jupyter"], version = "^22.8.0"}
+rich = "^12.6.0"
+pre-commit = "^2.20.0"
+
+
+[tool.poetry.scripts]
+generate_report = "econ_reports.main:main"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
