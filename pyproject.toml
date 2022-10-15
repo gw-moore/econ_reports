@@ -29,3 +29,20 @@ generate_report = "econ_reports.main:main"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+exclude = '''
+/(
+    \.git
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.nox
+    | \.venv
+    | \.ipynb_checkpoints
+    | _build
+    | buck-out
+    | build
+    | dist
+)/
+'''

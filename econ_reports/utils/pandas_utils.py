@@ -148,3 +148,11 @@ def calc_month_to_month_pct_chg(wide_df, grp_var: str, max_date):
     )
 
     return pct_chg_pivot
+
+
+def walkback_to_nearest_date(df, date) -> str:
+    """Take a pandas dataframe and returns the date on of before the given date."""
+    date_list = [date.to_pydatetime() for date in df.date.tolist()]
+    wb_dict = {(date - df_date).days: df_date for df_date in date_list}
+    nearest_date = wb_dict[min([days for days in wb_dict.keys() if int(days) > 0])]
+    return str(nearest_date.date())
