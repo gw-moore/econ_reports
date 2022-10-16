@@ -18,6 +18,8 @@ plotly = "^5.10.0"
 jupyterlab = "^3.4.7"
 rich = "^12.6.0"
 altair = "^4.2.0"
+seaborn = "^0.12.0"
+statsmodels = "^0.13.2"
 
 [tool.poetry.group.dev.dependencies]
 black = {extras = ["jupyter"], version = "^22.8.0"}
