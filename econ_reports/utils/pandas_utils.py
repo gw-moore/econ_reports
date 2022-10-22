@@ -34,56 +34,160 @@ def get_dates(df: pd.DataFrame, date_col: str = "date") -> Date:
     return Date(min=min_date, max=max_date)
 
 
-def calc_pct_chg_vs_latest_obv(
-    wide_df: pd.DataFrame,
-    lags: List[int],
-    max_date: datetime.date,
-    grp_var: str,
-    lag_var: str,
+def calc_pct_chg_for_latest_obv(
+    df: pd.DataFrame,
+    periods: List[int],
+    series_col: str,
+    value_col: str = "value",
+    date_col: str = "date",
+    period_col: str = "lag",
 ) -> pd.DataFrame:
-    """Calculate percent change on a wide pandas dataframe.
+    """Calculate the percent change the for given periods and extracts the latest observation
+    into a new dataframe.
 
-    Calculates the percent change of the latest observation in the dataframe with the given lags.
+    For example, suppose you have CPI data and want to calculate the percent change in the latest
+    print from 1-month ago, 6-months ago, 12-months ago, and 24-months ago.
 
     Parameters
     ----------
-    wide_df : pd.DataFrame
-        A wide pandas dataframe.
-    lags : List[int]
-        The lags on which to calculate percent change.
-    max_date : datetime.date
-        The max date on the wide_df.
-    grp_var : str
-        Name to give the group column when the wide dataframe is pivoted.
-    lag_var : str
-        Name to give the lag column.
+    df : pd.DataFrame
+        A long pandas dataframe.
+    periods : List[int]
+        The periods to calculate percent change.
+    series_col : str
+        Name of the column holding the series labels.
+    value_col : str, optional
+        Name of the column holding the series values. Defaults to "value"
+    date_col : str, optional
+        Name of the dates column. Defaults to 'date'
+    period_col : str, optional
+        Name to give the column representing the period for the percent change.
+        Defaults to "lag".
 
     Returns
     -------
-    Pandas dataframe pivot table.
+    Pandas dataframe.
     """
-    pct_chg_dfs = []
+    dates = get_dates(df=df)
+    max_date = dates.max
 
-    for lag in lags:
-        pct_chg_df = round(wide_df.pct_change(lag).iloc[[-1]], 4)
-        comparison_month = max_date - relativedelta(months=lag)
-        pct_chg_df["Date"] = comparison_month.strftime("%b %Y")
-        pct_chg_df[lag_var] = lag
+    df = df.set_index(date_col)
+    pct_chg_dfs = []
+    for lag in periods:
+        pct_chg_df = calc_groupby_pct_chg(
+            df=df,
+            by=series_col,
+            periods=lag,
+            value_col=value_col,
+        )
+
+        pct_chg_df = round(
+            pct_chg_df.groupby(series_col, sort=False, group_keys=True).tail(1), 4
+        )
+
+        pct_chg_df["vs_date"] = pd.to_datetime(max_date - relativedelta(months=lag))
+        pct_chg_df["lag"] = lag
+        pct_chg_df[period_col] = lag
         pct_chg_dfs.append(pct_chg_df)
 
     pct_chg_df = pd.concat(pct_chg_dfs)
+    pct_chg_df = pct_chg_df.reset_index()
+    return pct_chg_df.dropna()
 
-    pct_chg_pivot = pd.pivot_table(
-        pct_chg_df.melt(
-            id_vars=["Date", lag_var], var_name=grp_var, value_name="pct_chg"
-        ),
-        index=grp_var,
-        values="pct_chg",
-        columns=["Date", lag_var],
-        sort=False,
+
+def calc_groupby_pct_chg(
+    df: pd.DataFrame,
+    by: Union[str, List[str]],
+    periods: int = 1,
+    value_col: str = "value",
+) -> pd.DataFrame:
+    """Calculate a group by percent change. Useful when calculating a percent change
+    on a long dataframe.
+
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        A long pandas dataframe.
+    by :
+        Columns to group by.
+    periods : int
+        Periods to shift for forming percent change.
+    value_col : str
+        Column to calculate percent change on.
+
+    Return
+    -------
+    pd.DataFrame
+    """
+    pct_chg_df = df.copy()
+    pct_chg_df[f"pct_chg_{value_col}"] = (
+        pct_chg_df.groupby(by, sort=False, group_keys=True)[value_col]
+        .apply(lambda x: x.pct_change(periods))
+        .to_numpy()
     )
 
-    return pct_chg_pivot
+    return pct_chg_df.dropna()
+
+
+def pivot_pct_chg_tbl(
+    df: pd.DataFrame,
+    index_col: str,
+    pct_chg_col: str = "pct_chg_value",
+    date_col: str = "date",
+    n: Union[int, str] = 6,
+    other_cols: List[str] = None,
+) -> pd.DataFrame:
+    """Pivot a percent change dataframe. Designed to work with the `calc_groupby_pct_chg` and
+    `calc_pct_chg_for_latest_obv` functions.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Pandas dataframe.
+    index_col : str
+        Column to make the index.
+    pct_chg_col : str
+        Name of the percent change column.
+    date_col : str, optional
+        Name of the date column. Defaults to date.
+    n : int | str, optional
+        Number of periods to show in pivot table. Defaults to 6.
+        Accepts positive in or "all".
+    other_cols : List[str]
+        Other columns to include in the pivot table header.
+
+    Returns
+    -------
+    pd.DataFrame
+        Pandas pivot table.
+    """
+    pv_df = df.copy()
+    pv_df["Date"] = pv_df[date_col].dt.strftime("%b %Y")
+
+    if n == "all":
+        pv_dates = pv_df["Date"].tolist()
+        pv_dates = sorted(list(set(pv_dates)))
+    else:
+        pv_dates = pv_df["Date"].tail(n).tolist()
+
+    pv_df = pv_df.loc[pv_df["Date"].isin(pv_dates)]
+
+    columns = ["Date"]
+    if isinstance(other_cols, list):
+        for col in other_cols:
+            pv_df = pv_df.rename(columns={col: col.replace("_", " ").title()})
+        columns = columns + [c.replace("_", " ").title() for c in other_cols]
+    pivot_table = pd.pivot_table(
+        pv_df,
+        index=index_col,
+        values=pct_chg_col,
+        columns=columns,
+        sort=False,
+    )
+    pivot_table.index.name = index_col.replace("_", " ").title()
+
+    return pivot_table
 
 
 def display_pct_chg_df(df: pd.DataFrame, title: str) -> None:
@@ -118,77 +222,6 @@ def display_pct_chg_df(df: pd.DataFrame, title: str) -> None:
             ]
         )
     )
-
-
-def calc_groupby_pct_chg(
-    df: pd.DataFrame,
-    grp_column: Union[str, List[str]],
-    periods: int = 1,
-    column: str = "value",
-) -> pd.DataFrame:
-    """Calculate a group by percent change.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        A long pandas dataframe.
-    grp_column :
-        Columns to group by.
-    periods : int
-        Periods to shift for forming percent change.
-    column : str
-        Column to calculate percent change on.
-
-    Return
-    -------
-    pd.DataFrame
-    """
-    pct_chg_df = df.copy()
-    pct_chg_df[f"pct_chg_{column}"] = (
-        pct_chg_df.groupby(grp_column, sort=False, group_keys=True)[column]
-        .apply(lambda x: x.pct_change(periods))
-        .to_numpy()
-    )
-
-    return pct_chg_df.dropna()
-
-
-def pivot_pct_chg_tbl(
-    df: pd.DataFrame,
-    index_column: str,
-    pct_chg_column: str = "pct_chg_value",
-) -> pd.DataFrame:
-    """Pivot a percent change dataframe. Designed to work with the `calc_groupby_pct_chg` and
-    `calc_pct_chg_vs_latest_obv` functions.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Pandas dataframe.
-    index_column : str
-        Column to make the index.
-    pct_chg_column : str
-        Name of the percent change column.
-
-    Returns
-    -------
-    Pandas pivot table.
-    """
-    pv_df = df.copy()
-    pv_df["Date"] = pv_df.date.dt.strftime("%b %Y")
-    pv_dates = pv_df["Date"].tail(6).tolist()
-    pv_df = pv_df.loc[pv_df["Date"].isin(pv_dates)]
-
-    pivot_table = pd.pivot_table(
-        pv_df,
-        index=index_column,
-        values=pct_chg_column,
-        columns=["Date"],
-        sort=False,
-    )
-    pivot_table.index.name = index_column.replace("_", " ").title()
-
-    return pivot_table
 
 
 def walkback_to_nearest_date(df, date) -> str:
