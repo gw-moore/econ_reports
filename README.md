@@ -4,7 +4,7 @@ This repo contains a set of economics reports stored as jupyter notebooks. The n
 
 ## Available reports
 
-- Inflation - reports the change in prices overtime
+- CPI - reports the change in prices overtime
 
 ## Setup for development / contributing
 
@@ -27,8 +27,11 @@ make report report=cpi
 ```
 
 This command run two steps
-    1. Papermill is used to run `cpi.ipynb` file in the `notebooks` directory and stores the output notebook at `site/source/notebooks`
-    2. nbconvert converts the output notebook into an html file at `site/source/html`
+
+1. Papermill is used to run `cpi.ipynb` file in the `notebooks/` directory and stores the output notebook at `site/source/notebooks`
+2. nbconvert converts the output notebook into an html file and stores the output at `site/source/html`
+
+To view the report, simply open the html file at `site/source/html/cpi_{}.html`
 
 ## Guide for building notebooks
 

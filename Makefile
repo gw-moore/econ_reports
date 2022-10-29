@@ -4,10 +4,10 @@ report: papermill html
 
 papermill:
 	papermill notebooks/$(report).ipynb \
-	site/source/notebooks/$(report)_$(RUN_DATE).ipynb
+	site/source/notebooks/$(report).ipynb
 
 html:
-	jupyter nbconvert site/source/notebooks/$(report)_$(RUN_DATE).ipynb \
+	jupyter nbconvert site/source/notebooks/$(report).ipynb \
 	--to html --output-dir site/source/html/ \
 	--TagRemovePreprocessor.enabled=True \
 	--TagRemovePreprocessor.remove_input_tags="remove_input" \
