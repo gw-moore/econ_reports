@@ -8,7 +8,7 @@ readme = "README.md"
 packages = [{include = "econ_reports_utils"}]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.11"
+python = ">=3.10,<3.12"
 pandas = "^1.5.0"
 jupyter = "^1.0.0"
 nbconvert = "^7.2.1"

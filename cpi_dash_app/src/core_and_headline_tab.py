@@ -1,6 +1,8 @@
 """Dash object for the home page."""
 
 import dash_bootstrap_components as dbc
+import pandas as pd
+import plotly.express as px
 from dash import Dash, Input, Output, dash_table, dcc, html
 
 from econ_reports_utils.pandas import (
@@ -18,6 +20,7 @@ series_column_name = "cpi_series"
 series = ["All items", "All items less food and energy"]
 
 long_df, wide_df = _get_data(series)
+dates = get_dates(long_df, "date")
 
 mtm_pct_chg_df = calc_groupby_pct_chg(df=long_df, by=series_column_name, periods=1).dropna()
 yty_pct_chg_df = calc_groupby_pct_chg(df=long_df, by=series_column_name, periods=12).dropna()
@@ -29,6 +32,20 @@ mtm_pct_chg_pivot_tbl = pivot_pct_chg_tbl(
 )
 
 mtm_line_plot, yty_line_plot = _mk_line_plot(mtm_pct_chg_df, yty_pct_chg_df, category="Core & Headline")
+
+
+def generate_table(dataframe, max_rows=10):
+    return html.Table(
+        [
+            html.Thead(html.Tr([html.Th(col) for col in dataframe.columns])),
+            html.Tbody(
+                [
+                    html.Tr([html.Td(dataframe.iloc[i][col]) for col in dataframe.columns])
+                    for i in range(min(len(dataframe), max_rows))
+                ]
+            ),
+        ]
+    )
 
 
 month_over_month_tab_content = dbc.Card(
@@ -48,7 +65,7 @@ headline_and_core_content = dbc.Container(
         html.Hr(),
         dcc.Markdown(
             """
-            # Percent Change in Core and Headline Inflation
+            # Percent Change Time Series Plots
             """
         ),
         dbc.Tabs(

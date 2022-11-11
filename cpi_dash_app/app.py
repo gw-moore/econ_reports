@@ -7,6 +7,7 @@ from src.energy_tab import energy_content
 from src.food_tab import food_content
 from src.housing_tab import housing_content
 from src.medical_tab import medical_content
+from src.overview_tab import overview_content
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.YETI])
 
@@ -36,8 +37,8 @@ sidebar = html.Div(
         html.P("CPI Category", className="lead"),
         dbc.Nav(
             [
-                # dbc.NavLink("Overview", href="/", active="exact"),
-                dbc.NavLink("Core & Headline", href="/", active="exact"),
+                dbc.NavLink("Overview", href="/", active="exact"),
+                dbc.NavLink("Core & Headline", href="/coreandheadline", active="exact"),
                 dbc.NavLink("Energy", href="/energy", active="exact"),
                 dbc.NavLink("Food", href="/food", active="exact"),
                 dbc.NavLink("Education", href="/education", active="exact"),
@@ -59,9 +60,9 @@ app.layout = html.Div([dcc.Location(id="url"), sidebar, content])
 
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
 def render_page_content(pathname):
-    # if pathname == "/":
-    #     return html.P("This is the home page")
     if pathname == "/":
+        return overview_content
+    elif pathname == "/coreandheadline":
         return headline_and_core_content
     elif pathname == "/food":
         return food_content

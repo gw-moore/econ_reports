@@ -1,4 +1,5 @@
 import pickle
+from pathlib import Path
 
 import pyfredapi as pf
 from rich.console import Console
@@ -43,13 +44,22 @@ def parse_title(title: str) -> str:
     )
 
 
-cpi_sc = pf.SeriesCollection()
-cpi_sc.add_series(series_ids=cpi_series, rename=parse_title)
+def main():
+    """Collect CPI data from FRED."""
 
-long_df = cpi_sc.merge_long(col_name=series_column_name)
-wide_df = cpi_sc.merge_asof(base_series_id="CPIAUCSL")
+    data_path = str(Path(__file__).resolve().parent) + "/src/data/cpi/"
 
-long_df.to_csv("src/data/cpi/long_df.csv", index=False)
-wide_df.to_csv("src/data/cpi/wide_df.csv", index=False)
+    cpi_sc = pf.SeriesCollection()
+    cpi_sc.add_series(series_ids=cpi_series, rename=parse_title)
 
-pickle.dump(cpi_sc)
+    long_df = cpi_sc.merge_long(col_name=series_column_name)
+    wide_df = cpi_sc.merge_asof(base_series_id="CPIAUCSL")
+
+    long_df.to_csv(data_path + "long_df.csv", index=False)
+    wide_df.to_csv(data_path + "wide_df.csv", index=False)
+
+    # pickle.dump(cpi_sc)
+
+
+if __name__ == "__main__":
+    main()
